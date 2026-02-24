@@ -25,7 +25,9 @@ Claude, Gemini, Notion 등 여러 AI/웹 서비스를 하나의 창에서 탭으
 
 ## 스크린샷
 
-> 추가 예정
+<img width="1896" height="1218" alt="image" src="https://github.com/user-attachments/assets/ce5f93ae-1898-416f-b417-704b75173486" />
+![Uploading image.png…]()
+
 
 ---
 
