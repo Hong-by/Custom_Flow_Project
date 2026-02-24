@@ -8,8 +8,18 @@ import 'package:system_tray/system_tray.dart';
 import 'package:window_manager/window_manager.dart';
 import 'app.dart';
 
+ServerSocket? _lockServer;
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // 중복 실행 방지: 고정 포트 바인딩 시도
+  try {
+    _lockServer = await ServerSocket.bind(InternetAddress.loopbackIPv4, 47392);
+  } catch (_) {
+    // 이미 다른 인스턴스가 실행 중 → 조용히 종료
+    exit(0);
+  }
 
   // window_manager 초기화
   await windowManager.ensureInitialized();
@@ -59,6 +69,7 @@ class _AppLifecycleState extends State<_AppLifecycle> with WindowListener {
   void dispose() {
     hotKeyManager.unregisterAll();
     windowManager.removeListener(this);
+    _lockServer?.close();
     super.dispose();
   }
 
@@ -76,24 +87,29 @@ class _AppLifecycleState extends State<_AppLifecycle> with WindowListener {
   ///   경로: build/windows/x64/runner/Debug/custom_flow.exe
   ///         ↑5  ↑4       ↑3  ↑2     ↑1
   String _trayIconPath() {
-    const relPath = 'windows/runner/resources/app_icon.ico';
-    // 1) CWD 기준 (flutter run)
-    final cwdFile = File(relPath);
+    // 1) EXE 옆에 있는 아이콘 (Release/설치 환경)
+    try {
+      final exeDir = File(Platform.resolvedExecutable).parent;
+      for (final name in ['custom_flow_icon.ico', 'app_icon.ico']) {
+        final f = File('${exeDir.path}${Platform.pathSeparator}$name');
+        if (f.existsSync()) return f.absolute.path;
+      }
+    } catch (_) {}
+    // 2) CWD 기준 (flutter run)
+    const devPath = 'windows/runner/resources/app_icon.ico';
+    final cwdFile = File(devPath);
     if (cwdFile.existsSync()) return cwdFile.absolute.path;
-    // 2) EXE 위치 기준 (EXE 직접 실행)
-    // 경로: build/windows/x64/runner/Debug/custom_flow.exe
-    //         ↑6  ↑5      ↑4  ↑3    ↑2   ↑1(parent)
-    // parent에서 시작해서 6단계 위(프로젝트 루트)까지 탐색
+    // 3) EXE에서 위로 탐색 (Debug 빌드 폴더 실행)
     try {
       var dir = File(Platform.resolvedExecutable).parent;
       for (int i = 0; i < 6; i++) {
-        final candidate = File('${dir.path}${Platform.pathSeparator}$relPath');
+        final candidate = File('${dir.path}${Platform.pathSeparator}$devPath');
         if (candidate.existsSync()) return candidate.absolute.path;
         dir = dir.parent;
       }
     } catch (_) {}
-    // 3) 최후 fallback (보통 도달하지 않음)
-    return File(relPath).absolute.path;
+    // 4) fallback
+    return File(devPath).absolute.path;
   }
 
   Future<void> _initHotKey() async {
