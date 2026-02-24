@@ -1,0 +1,50 @@
+name: custom_flow
+description: Custom-Flow — Multi-AI workspace app
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.11.0
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+
+  # State management
+  flutter_riverpod: ^2.5.1
+
+  # WebView — webview_windows: Windows WebView2 전용 패키지
+  webview_windows: ^0.4.0
+
+  # Window management (frameless window, custom titlebar)
+  window_manager: ^0.3.9
+
+  # System tray (hide to tray on close)
+  system_tray: ^2.0.3
+
+  # Korean font (Noto Sans KR)
+  google_fonts: ^6.2.1
+
+  # Persistence (replaces electron-store)
+  shared_preferences: ^2.2.3
+
+  # URL launcher (open in external browser)
+  url_launcher: ^6.2.5
+
+  # Global hotkey (show/hide window from tray)
+  hotkey_manager: ^0.2.3
+
+  # HTTP client (Python backend, optional)
+  http: ^1.2.1
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/app_icon.png
