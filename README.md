@@ -16,6 +16,7 @@
 * **쾌적한 사용자 경험**: AI랑 Saas 서비스 사용한다고 여러개의 창을 띄울 필요없이 디테일한 편의 기능을 통해 웹 서비스 그 이상의 네이티브 경험을 제공합니다.
 
 [MacOS 다운로드 (v1.0.0)](https://github.com/Hong-by/Custom_Flow_Project/releases/latest)
+
 [Windows 다운로드 (v1.0.0)](https://github.com/Hong-by/Custom_Flow_Project/releases/tag/v1.0.0)
 
 ---
