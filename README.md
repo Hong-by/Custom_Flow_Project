@@ -67,8 +67,8 @@
 ### 설치 및 실행
 
 ```bash
-git clone https://github.com/Hong-by/Ai_test.git
-cd Ai_test
+git clone https://github.com/Hong-by/Custom_Flow_Project.git
+cd Custom_Flow_Project
 flutter pub get
 flutter run -d windows
 ```
