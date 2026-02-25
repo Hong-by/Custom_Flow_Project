@@ -4,6 +4,12 @@ import 'package:webview_flutter/webview_flutter.dart';
 import 'platform_webview_interface.dart';
 
 /// macOS WKWebView 구현체
+///
+/// Google OAuth 로그인을 허용하기 위해:
+/// 1. JavaScript 채널(messageHandler)을 등록하지 않는다
+///    → WKWebView 감지 지표인 window.webkit.messageHandlers가 생성되지 않음
+/// 2. User-Agent를 Safari로 설정한다
+/// 3. JS→Flutter 통신은 커스텀 URL 스킴(cfmsg://)으로 대체한다
 class MacOSWebViewController implements PlatformWebViewController {
   late final WebViewController _controller;
 
@@ -11,18 +17,27 @@ class MacOSWebViewController implements PlatformWebViewController {
       StreamController<WebViewLoadingState>.broadcast();
   final _messageController = StreamController<String>.broadcast();
 
-  /// 페이지 로드 시마다 자동 실행할 스크립트 목록
   final List<String> _documentCreatedScripts = [];
 
+  /// Safari 18 User-Agent (macOS Sequoia)
+  static const _safariUA =
+      'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) '
+      'AppleWebKit/605.1.15 (KHTML, like Gecko) '
+      'Version/18.3 Safari/605.1.15';
+
   /// window.chrome.webview.postMessage 호환 심
-  /// Windows WebView2 API를 에뮬레이션하여 기존 JS 코드가 양쪽 플랫폼에서 동작
+  /// messageHandler 대신 커스텀 URL 스킴으로 메시지를 전달한다.
   static const _postMessageShim = '''
     (function() {
       if (!window.chrome) window.chrome = {};
       if (!window.chrome.webview) {
         window.chrome.webview = {
           postMessage: function(msg) {
-            nativeChannel.postMessage(msg);
+            var iframe = document.createElement('iframe');
+            iframe.style.display = 'none';
+            iframe.src = 'cfmsg://' + encodeURIComponent(String(msg));
+            document.body.appendChild(iframe);
+            setTimeout(function() { iframe.remove(); }, 100);
           }
         };
       }
@@ -33,31 +48,33 @@ class MacOSWebViewController implements PlatformWebViewController {
   Future<void> initialize() async {
     _controller = WebViewController()
       ..setJavaScriptMode(JavaScriptMode.unrestricted)
-      ..setUserAgent(
-        'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) '
-        'AppleWebKit/537.36 (KHTML, like Gecko) '
-        'Chrome/131.0.0.0 Safari/537.36',
-      )
+      ..setUserAgent(_safariUA)
+      // ★ addJavaScriptChannel 호출하지 않음 — WKWebView 감지 방지
       ..setNavigationDelegate(NavigationDelegate(
         onPageStarted: (_) {
           _loadingStateController.add(WebViewLoadingState.loading);
         },
         onPageFinished: (_) {
           _loadingStateController.add(WebViewLoadingState.completed);
-          // postMessage 호환 심 주입
           _controller.runJavaScript(_postMessageShim).catchError((_) {});
-          // 등록된 사용자 스크립트 실행
           for (final script in _documentCreatedScripts) {
             _controller.runJavaScript(script).catchError((_) {});
           }
         },
-      ))
-      ..addJavaScriptChannel(
-        'nativeChannel',
-        onMessageReceived: (message) {
-          _messageController.add(message.message);
+        onNavigationRequest: (NavigationRequest request) {
+          // 커스텀 URL 스킴으로 전달된 JS 메시지를 수신
+          if (request.url.startsWith('cfmsg://')) {
+            try {
+              final msg = Uri.decodeComponent(
+                request.url.substring('cfmsg://'.length),
+              );
+              _messageController.add(msg);
+            } catch (_) {}
+            return NavigationDecision.prevent;
+          }
+          return NavigationDecision.navigate;
         },
-      );
+      ));
   }
 
   @override
