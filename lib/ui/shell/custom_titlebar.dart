@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:window_manager/window_manager.dart';
@@ -7,7 +9,9 @@ import '../../providers/split_view_provider.dart';
 import '../modals/settings_modal.dart';
 
 /// 커스텀 타이틀바 (데스크톱 전용)
-/// 버튼 배치: [☰ 사이드바] [타이틀] [Spacer] [⫽ 분할] [ㅡ] [□] [⚙️] [X]
+///
+/// Windows: [☰ 사이드바] [Spacer] [⫽ 분할] [ㅡ] [□] [⚙️] [X]
+/// macOS:   [🔴🟡🟢 신호등 공간] [☰ 사이드바] [Spacer] [⫽ 분할] [⚙️]
 class CustomTitleBar extends ConsumerStatefulWidget {
   const CustomTitleBar({super.key});
 
@@ -18,6 +22,7 @@ class CustomTitleBar extends ConsumerStatefulWidget {
 class _CustomTitleBarState extends ConsumerState<CustomTitleBar>
     with WindowListener {
   bool _isFullScreen = false;
+  static final bool _isMacOS = Platform.isMacOS;
 
   @override
   void initState() {
@@ -59,10 +64,15 @@ class _CustomTitleBarState extends ConsumerState<CustomTitleBar>
         color: const Color(kColorBgSecondary),
         child: Row(
           children: [
-            // 햄버거 버튼 — 사이드바 토글 (Ctrl+B와 동일)
+            // macOS: 네이티브 신호등 버튼(닫기/최소화/전체화면) 공간 확보
+            if (_isMacOS) const SizedBox(width: 70),
+
+            // 햄버거 버튼 — 사이드바 토글
             _TitleBarButton(
               icon: sidebarExpanded ? Icons.menu_open : Icons.menu,
-              tooltip: sidebarExpanded ? '사이드바 닫기' : '사이드바 열기',
+              tooltip: sidebarExpanded
+                  ? '사이드바 닫기 (${_isMacOS ? '⌘B' : 'Ctrl+B'})'
+                  : '사이드바 열기 (${_isMacOS ? '⌘B' : 'Ctrl+B'})',
               onTap: () => ref.read(sidebarExpandedProvider.notifier).toggle(),
             ),
 
@@ -82,23 +92,24 @@ class _CustomTitleBarState extends ConsumerState<CustomTitleBar>
               },
             ),
 
-            // 최소화
-            _TitleBarButton(
-              icon: Icons.remove,
-              tooltip: '최소화',
-              onTap: () => windowManager.minimize(),
-            ),
+            // Windows 전용: 최소화, 전체화면, 닫기 버튼
+            // macOS: 네이티브 신호등 버튼이 이 역할을 대신함
+            if (!_isMacOS) ...[
+              _TitleBarButton(
+                icon: Icons.remove,
+                tooltip: '최소화',
+                onTap: () => windowManager.minimize(),
+              ),
+              _TitleBarButton(
+                icon: _isFullScreen ? Icons.fullscreen_exit : Icons.fullscreen,
+                tooltip: _isFullScreen ? '전체화면 해제' : '전체화면',
+                onTap: () async {
+                  await windowManager.setFullScreen(!_isFullScreen);
+                },
+              ),
+            ],
 
-            // 전체화면 토글
-            _TitleBarButton(
-              icon: _isFullScreen ? Icons.fullscreen_exit : Icons.fullscreen,
-              tooltip: _isFullScreen ? '전체화면 해제' : '전체화면',
-              onTap: () async {
-                await windowManager.setFullScreen(!_isFullScreen);
-              },
-            ),
-
-            // 환경설정
+            // 환경설정 (양쪽 플랫폼 공통)
             _TitleBarButton(
               icon: Icons.settings_outlined,
               tooltip: '환경설정',
@@ -108,13 +119,14 @@ class _CustomTitleBarState extends ConsumerState<CustomTitleBar>
               ),
             ),
 
-            // X — 트레이로 숨김
-            _TitleBarButton(
-              icon: Icons.close,
-              tooltip: '트레이로 최소화',
-              isClose: true,
-              onTap: () => windowManager.hide(),
-            ),
+            // Windows 전용: X — 트레이로 숨김
+            if (!_isMacOS)
+              _TitleBarButton(
+                icon: Icons.close,
+                tooltip: '트레이로 최소화',
+                isClose: true,
+                onTap: () => windowManager.hide(),
+              ),
 
             const SizedBox(width: 4),
           ],

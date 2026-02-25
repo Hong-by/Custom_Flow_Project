@@ -15,8 +15,12 @@ dependencies:
   # State management
   flutter_riverpod: ^2.5.1
 
-  # WebView — webview_windows: Windows WebView2 전용 패키지
+  # WebView — Windows (WebView2)
   webview_windows: ^0.4.0
+
+  # WebView — macOS (WKWebView)
+  webview_flutter: ^4.10.0
+  webview_flutter_wkwebview: ^3.16.0
 
   # Window management (frameless window, custom titlebar)
   window_manager: ^0.3.9

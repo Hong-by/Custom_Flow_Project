@@ -24,14 +24,16 @@ void main() async {
   // window_manager 초기화
   await windowManager.ensureInitialized();
 
-  const windowOptions = WindowOptions(
-    size: Size(1280, 820),
-    minimumSize: Size(900, 600),
+  final windowOptions = WindowOptions(
+    size: const Size(1280, 820),
+    minimumSize: const Size(900, 600),
     center: true,
-    backgroundColor: Color(0xFF1E1E1E),
+    backgroundColor: const Color(0xFF1E1E1E),
     skipTaskbar: false,
     titleBarStyle: TitleBarStyle.hidden,
-    windowButtonVisibility: false,
+    // macOS: 네이티브 신호등 버튼(닫기/최소화/전체화면) 표시
+    // Windows: 커스텀 타이틀바 버튼 사용
+    windowButtonVisibility: Platform.isMacOS,
   );
 
   await windowManager.waitUntilReadyToShow(windowOptions, () async {
@@ -73,20 +75,37 @@ class _AppLifecycleState extends State<_AppLifecycle> with WindowListener {
     super.dispose();
   }
 
-  /// X 버튼(또는 Alt+F4): 종료하지 않고 트레이로 숨김
+  /// X 버튼(또는 Alt+F4 / Cmd+W): 종료하지 않고 최소화/숨김
   @override
   void onWindowClose() async {
-    await windowManager.hide();
+    if (Platform.isMacOS) {
+      await windowManager.minimize();
+    } else {
+      await windowManager.hide();
+    }
   }
 
-  /// ICO 파일의 절대 경로를 반환한다.
+  /// 트레이 아이콘 파일 경로를 반환한다.
+  /// Windows: .ico 파일, macOS: .png 파일
+  String _trayIconPath() {
+    if (Platform.isMacOS) return _macOSTrayIconPath();
+    return _windowsTrayIconPath();
+  }
+
+  /// macOS 트레이 아이콘 경로
+  /// system_tray macOS 구현은 Flutter rootBundle을 사용하므로 에셋 키를 반환
+  String _macOSTrayIconPath() {
+    return 'assets/app_icon.png';
+  }
+
+  /// Windows 트레이 아이콘 경로 (.ico)
   ///
   /// - `flutter run` 실행 시: CWD = 프로젝트 루트 → 상대 경로 존재
   /// - EXE 직접 실행 시: CWD = EXE 디렉토리(build/.../Debug/) → 상대 경로 없음
   ///   EXE 위치에서 5단계 위로 올라가면 프로젝트 루트에 도달한다.
   ///   경로: build/windows/x64/runner/Debug/custom_flow.exe
   ///         ↑5  ↑4       ↑3  ↑2     ↑1
-  String _trayIconPath() {
+  String _windowsTrayIconPath() {
     // 1) EXE 옆에 있는 아이콘 (Release/설치 환경)
     try {
       final exeDir = File(Platform.resolvedExecutable).parent;
@@ -122,12 +141,28 @@ class _AppLifecycleState extends State<_AppLifecycle> with WindowListener {
       await hotKeyManager.register(
         hotKey,
         keyDownHandler: (_) async {
-          final isVisible = await windowManager.isVisible();
-          if (!isVisible) {
-            await windowManager.show();
-            await windowManager.focus();
-          } else {
-            await windowManager.hide();
+          try {
+            if (Platform.isMacOS) {
+              // macOS: minimize/restore 토글
+              final isMinimized = await windowManager.isMinimized();
+              if (isMinimized) {
+                await windowManager.restore();
+                await windowManager.focus();
+              } else {
+                await windowManager.minimize();
+              }
+            } else {
+              // Windows: hide/show 토글
+              final isVisible = await windowManager.isVisible();
+              if (!isVisible) {
+                await windowManager.show();
+                await windowManager.focus();
+              } else {
+                await windowManager.hide();
+              }
+            }
+          } catch (e) {
+            debugPrint('[HotKey] 핸들러 오류: $e');
           }
         },
       );
@@ -154,6 +189,10 @@ class _AppLifecycleState extends State<_AppLifecycle> with WindowListener {
         label: '열기',
         onClicked: (_) async {
           await windowManager.show();
+          if (Platform.isMacOS) {
+            await windowManager.setAlwaysOnTop(true);
+            await windowManager.setAlwaysOnTop(false);
+          }
           await windowManager.focus();
         },
       ),
@@ -171,6 +210,10 @@ class _AppLifecycleState extends State<_AppLifecycle> with WindowListener {
       if (eventName == kSystemTrayEventClick) {
         // 좌클릭: 창 표시
         await windowManager.show();
+        if (Platform.isMacOS) {
+          await windowManager.setAlwaysOnTop(true);
+          await windowManager.setAlwaysOnTop(false);
+        }
         await windowManager.focus();
       } else if (eventName == kSystemTrayEventRightClick) {
         // 우클릭: 컨텍스트 메뉴

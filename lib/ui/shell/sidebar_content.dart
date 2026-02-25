@@ -237,12 +237,16 @@ class _SidebarHeader extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 8),
-          Text(
-            'Custom-Flow',
-            style: GoogleFonts.notoSansKr(
-              fontSize: 14,
-              fontWeight: FontWeight.w700,
-              color: Colors.white,
+          Flexible(
+            child: Text(
+              'Custom-Flow',
+              overflow: TextOverflow.clip,
+              maxLines: 1,
+              style: GoogleFonts.notoSansKr(
+                fontSize: 14,
+                fontWeight: FontWeight.w700,
+                color: Colors.white,
+              ),
             ),
           ),
         ],

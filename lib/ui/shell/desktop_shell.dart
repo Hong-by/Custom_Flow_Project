@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -99,9 +101,14 @@ class _DesktopShellState extends ConsumerState<DesktopShell> with WindowListener
   Widget build(BuildContext context) {
     final sidebarExpanded = ref.watch(sidebarExpandedProvider);
 
+    // 사이드바 토글: macOS → Cmd+B, Windows → Ctrl+B
+    final sidebarShortcut = Platform.isMacOS
+        ? const SingleActivator(LogicalKeyboardKey.keyB, meta: true)
+        : const SingleActivator(LogicalKeyboardKey.keyB, control: true);
+
     return CallbackShortcuts(
       bindings: {
-        const SingleActivator(LogicalKeyboardKey.keyB, control: true): () {
+        sidebarShortcut: () {
           ref.read(sidebarExpandedProvider.notifier).toggle();
         },
       },

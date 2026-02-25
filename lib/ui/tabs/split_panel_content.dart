@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'package:webview_windows/webview_windows.dart';
+import '../../platform/platform_webview.dart';
 import '../../core/constants.dart';
 import '../../core/utils.dart';
 import '../../models/tab_item.dart';
@@ -320,7 +320,7 @@ class SplitWebViewPanel extends ConsumerStatefulWidget {
 }
 
 class _SplitWebViewPanelState extends ConsumerState<SplitWebViewPanel> {
-  final _controller = WebviewController();
+  final _controller = createPlatformWebView();
   bool _isLoading = true;
   bool _initialized = false;
 
@@ -367,18 +367,18 @@ class _SplitWebViewPanelState extends ConsumerState<SplitWebViewPanel> {
       }
 
       try {
-        await _controller.addScriptToExecuteOnDocumentCreated(_ctrlTabScript);
+        await _controller.addScriptOnDocumentCreated(_ctrlTabScript);
       } catch (_) {}
 
-      _controller.webMessage.listen((message) {
-        if (!mounted || message is! String) return;
+      _controller.messageStream.listen((message) {
+        if (!mounted) return;
         _handleWebMessage(message);
       });
 
-      _controller.loadingState.listen((state) {
+      _controller.loadingStateStream.listen((state) {
         if (!mounted) return;
-        setState(() => _isLoading = state == LoadingState.loading);
-        if (state == LoadingState.navigationCompleted) {
+        setState(() => _isLoading = state == WebViewLoadingState.loading);
+        if (state == WebViewLoadingState.completed) {
           _controller.executeScript(_fontInjectionJs).catchError((_) {});
         }
       });
@@ -438,7 +438,7 @@ class _SplitWebViewPanelState extends ConsumerState<SplitWebViewPanel> {
   @override
   void dispose() {
     ref.read(webviewRegistryProvider.notifier).update(
-      (m) => Map<String, WebviewController>.from(m)..remove('split'),
+      (m) => Map<String, PlatformWebViewController>.from(m)..remove('split'),
     );
     _controller.dispose();
     super.dispose();
@@ -455,23 +455,31 @@ class _SplitWebViewPanelState extends ConsumerState<SplitWebViewPanel> {
       );
     }
 
+    Widget webview = _controller.buildWidget();
+
+    // Windows: WebView2는 네이티브 스크롤 이벤트를 Flutter로 전달하지 않으므로 JS로 처리
+    // macOS: WKWebView가 자체 스크롤 처리하므로 Listener 불필요
+    if (_controller.needsManualScrollHandling) {
+      webview = Listener(
+        onPointerSignal: (event) {
+          if (event is PointerScrollEvent) {
+            _controller
+                .executeScript(_scrollScript(
+                  event.localPosition.dx,
+                  event.localPosition.dy,
+                  event.scrollDelta.dx,
+                  event.scrollDelta.dy,
+                ))
+                .catchError((_) {});
+          }
+        },
+        child: webview,
+      );
+    }
+
     return Stack(
       children: [
-        Listener(
-          onPointerSignal: (event) {
-            if (event is PointerScrollEvent) {
-              _controller
-                  .executeScript(_scrollScript(
-                    event.localPosition.dx,
-                    event.localPosition.dy,
-                    event.scrollDelta.dx,
-                    event.scrollDelta.dy,
-                  ))
-                  .catchError((_) {});
-            }
-          },
-          child: Webview(_controller),
-        ),
+        webview,
         if (_isLoading)
           const Center(
             child: CircularProgressIndicator(
