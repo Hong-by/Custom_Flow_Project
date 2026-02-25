@@ -15,7 +15,8 @@
 * **생산성을 높이는 분할 뷰**: 두 개의 AI 모델을 나란히 띄워 답변을 비교하거나, Notion과 AI를 동시에 보며 작업할 수 있습니다.
 * **쾌적한 사용자 경험**: AI랑 Saas 서비스 사용한다고 여러개의 창을 띄울 필요없이 디테일한 편의 기능을 통해 웹 서비스 그 이상의 네이티브 경험을 제공합니다.
 
-[Windows 다운로드 (v1.0.0)](https://github.com/Hong-by/Ai_test/releases/latest)
+[MacOS 다운로드 (v1.0.0)](https://github.com/Hong-by/Custom_Flow_Project/releases/latest)
+[Windows 다운로드 (v1.0.0)](https://github.com/Hong-by/Custom_Flow_Project/releases/tag/v1.0.0)
 
 ---
 
