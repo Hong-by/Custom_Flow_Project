@@ -35,6 +35,11 @@ class NativeWebViewContainer: NSView, WKNavigationDelegate, WKUIDelegate {
     /// OAuth 팝업 등 window.open()으로 생성된 자식 WKWebView
     private var popupWebView: WKWebView?
 
+    /// 모든 WebView가 공유하는 프로세스 풀
+    /// → 탭 간 쿠키, 세션, JS 컴파일 캐시, 메모리 캐시 공유
+    /// → 두 번째 탭부터 로딩 속도가 크게 향상됨
+    private static let sharedProcessPool = WKProcessPool()
+
     private static let userAgent =
         "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) " +
         "AppleWebKit/537.36 (KHTML, like Gecko) " +
@@ -42,6 +47,8 @@ class NativeWebViewContainer: NSView, WKNavigationDelegate, WKUIDelegate {
 
     init(channelName: String, messenger: FlutterBinaryMessenger) {
         let config = WKWebViewConfiguration()
+        config.processPool = NativeWebViewContainer.sharedProcessPool
+        config.websiteDataStore = WKWebsiteDataStore.default()
         config.preferences.setValue(true, forKey: "javaScriptEnabled")
         config.preferences.setValue(true, forKey: "javaScriptCanOpenWindowsAutomatically")
         // ★ messageHandler를 등록하지 않음 → window.webkit.messageHandlers 없음

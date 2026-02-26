@@ -11,9 +11,17 @@ class WindowsWebViewController implements PlatformWebViewController {
       StreamController<WebViewLoadingState>.broadcast();
   final _messageController = StreamController<String>.broadcast();
 
+  static const _userAgent =
+      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) '
+      'AppleWebKit/537.36 (KHTML, like Gecko) '
+      'Chrome/131.0.0.0 Safari/537.36';
+
   @override
   Future<void> initialize() async {
     await _controller.initialize();
+
+    // Chrome User-Agent — Google OAuth 등 사이트 호환성 보장
+    await _controller.setUserAgent(_userAgent);
 
     _controller.loadingState.listen((state) {
       if (state == LoadingState.loading) {
@@ -50,6 +58,15 @@ class WindowsWebViewController implements PlatformWebViewController {
 
   @override
   bool get needsManualScrollHandling => true;
+
+  @override
+  bool get supportsNativeSuspend => true;
+
+  @override
+  Future<void> suspend() => _controller.suspend();
+
+  @override
+  Future<void> resume() => _controller.resume();
 
   @override
   Widget buildWidget() => Webview(_controller);

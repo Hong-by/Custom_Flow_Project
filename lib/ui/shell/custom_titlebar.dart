@@ -4,8 +4,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:window_manager/window_manager.dart';
 import '../../core/constants.dart';
+import '../../providers/active_tab_provider.dart';
 import '../../providers/sidebar_provider.dart';
 import '../../providers/split_view_provider.dart';
+import '../../providers/webview_registry_provider.dart';
 import '../modals/settings_modal.dart';
 
 /// 커스텀 타이틀바 (데스크톱 전용)
@@ -77,6 +79,19 @@ class _CustomTitleBarState extends ConsumerState<CustomTitleBar>
             ),
 
             const Spacer(),
+
+            // 새로고침 버튼 — 현재 활성 탭의 웹페이지를 리로드
+            _TitleBarButton(
+              icon: Icons.refresh,
+              tooltip: '새로고침 (${_isMacOS ? '⌘R' : 'Ctrl+R'})',
+              onTap: () {
+                final activeId = ref.read(activeTabIdProvider);
+                final registry = ref.read(webviewRegistryProvider);
+                registry[activeId]
+                    ?.executeScript('location.reload()')
+                    .catchError((_) {});
+              },
+            ),
 
             // 분할 버튼 — 좌우 2분할 토글
             _TitleBarButton(

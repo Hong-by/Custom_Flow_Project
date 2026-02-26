@@ -103,6 +103,15 @@ class MacOSWebViewController implements PlatformWebViewController {
   bool get needsManualScrollHandling => false;
 
   @override
+  bool get supportsNativeSuspend => false;
+
+  @override
+  Future<void> suspend() async {}
+
+  @override
+  Future<void> resume() async {}
+
+  @override
   Widget buildWidget() {
     return _NativeWebViewWidget(
       channelName: _channelName,

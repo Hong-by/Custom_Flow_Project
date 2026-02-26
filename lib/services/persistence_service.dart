@@ -9,8 +9,16 @@ class PersistenceService {
   static const _tabsKey = 'custom_flow_tabs';
   static const _settingsKey = 'custom_flow_settings';
 
+  /// SharedPreferences 인스턴스 캐시
+  /// 매 호출마다 getInstance() 비동기 대기를 피한다.
+  static SharedPreferences? _prefsCache;
+
+  Future<SharedPreferences> get _prefs async {
+    return _prefsCache ??= await SharedPreferences.getInstance();
+  }
+
   Future<List<TabItem>> loadTabs() async {
-    final prefs = await SharedPreferences.getInstance();
+    final prefs = await _prefs;
     final raw = prefs.getString(_tabsKey);
     if (raw == null) return TabItem.defaults;
     try {
@@ -22,12 +30,12 @@ class PersistenceService {
   }
 
   Future<void> saveTabs(List<TabItem> tabs) async {
-    final prefs = await SharedPreferences.getInstance();
+    final prefs = await _prefs;
     await prefs.setString(_tabsKey, jsonEncode(tabs.map((t) => t.toJson()).toList()));
   }
 
   Future<AppSettings> loadSettings() async {
-    final prefs = await SharedPreferences.getInstance();
+    final prefs = await _prefs;
     final raw = prefs.getString(_settingsKey);
     if (raw == null) return const AppSettings();
     try {
@@ -38,7 +46,7 @@ class PersistenceService {
   }
 
   Future<void> saveSettings(AppSettings settings) async {
-    final prefs = await SharedPreferences.getInstance();
+    final prefs = await _prefs;
     await prefs.setString(_settingsKey, jsonEncode(settings.toJson()));
   }
 }

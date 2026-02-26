@@ -11,6 +11,7 @@ import '../../providers/focused_tab_provider.dart';
 import '../../providers/sidebar_provider.dart';
 import '../../providers/split_view_provider.dart';
 import '../../providers/tabs_provider.dart';
+import '../../providers/webview_registry_provider.dart';
 import 'custom_titlebar.dart';
 import 'sidebar_content.dart';
 import '../tabs/split_panel_content.dart';
@@ -106,10 +107,22 @@ class _DesktopShellState extends ConsumerState<DesktopShell> with WindowListener
         ? const SingleActivator(LogicalKeyboardKey.keyB, meta: true)
         : const SingleActivator(LogicalKeyboardKey.keyB, control: true);
 
+    // 새로고침: macOS → Cmd+R, Windows → Ctrl+R
+    final refreshShortcut = Platform.isMacOS
+        ? const SingleActivator(LogicalKeyboardKey.keyR, meta: true)
+        : const SingleActivator(LogicalKeyboardKey.keyR, control: true);
+
     return CallbackShortcuts(
       bindings: {
         sidebarShortcut: () {
           ref.read(sidebarExpandedProvider.notifier).toggle();
+        },
+        refreshShortcut: () {
+          final activeId = ref.read(activeTabIdProvider);
+          final registry = ref.read(webviewRegistryProvider);
+          registry[activeId]
+              ?.executeScript('location.reload()')
+              .catchError((_) {});
         },
       },
       child: Focus(

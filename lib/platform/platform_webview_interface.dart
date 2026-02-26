@@ -31,6 +31,19 @@ abstract class PlatformWebViewController {
   /// macOS WKWebView: false (WKWebView가 자체적으로 스크롤 처리)
   bool get needsManualScrollHandling;
 
+  /// 네이티브 일시 중단 지원 여부
+  /// true: suspend/resume으로 상태를 유지한 채 CPU만 절약 (Windows WebView2)
+  /// false: 일시 중단 시 dispose/recreate 필요 (macOS WKWebView)
+  bool get supportsNativeSuspend => false;
+
+  /// 탭 일시 중단 (리소스 절약)
+  /// supportsNativeSuspend가 true인 플랫폼에서만 유효
+  Future<void> suspend() async {}
+
+  /// 탭 재개
+  /// supportsNativeSuspend가 true인 플랫폼에서만 유효
+  Future<void> resume() async {}
+
   /// WebView 위젯 반환
   Widget buildWidget();
 
